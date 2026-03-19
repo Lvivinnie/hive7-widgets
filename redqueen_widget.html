@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HIVE-7 // Red Queen Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050a0f;--panel:#0a0f14;--panel2:#0d1218;
+  --border:#1a0505;--glow:#ff2222;--glow-dim:#8b0000;
+  --accent:#ff2222;--accent2:#00ffcc;--accent2-dim:#006655;
+  --text:#e0e0e0;--text-dim:#555;--warn:#ff6600;--green:#00cc66;
+  --font-head:'Orbitron','Courier New',monospace;
+  --font-mono:'Share Tech Mono','Courier New',monospace;
+  --fs-xs:8px;--fs-sm:9px;--fs-md:11px;--fs-lg:14px;--fs-xl:18px;--fs-xxl:24px;
+}
+html,body{width:100%;height:100vh;overflow:hidden;background:var(--bg);font-family:var(--font-mono);color:var(--text);user-select:none}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--glow-dim);border-radius:2px}
+
+/* Wrapper */
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* Title Bar */
+.title-bar{
+  -webkit-app-region: drag;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 12px;
+  background:#080808;
+  border-bottom:1px solid var(--border);
+  box-shadow:0 1px 16px rgba(139,0,0,0.25);
+  flex-shrink:0;
+}
+.title-bar .left{display:flex;align-items:center;gap:10px}
+.led{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--glow);box-shadow:0 0 8px var(--glow);
+  animation:pulse-led 2s ease-in-out infinite;
+}
+@keyframes pulse-led{
+  0%,100%{box-shadow:0 0 6px var(--glow);opacity:1}
+  50%{box-shadow:0 0 14px var(--glow);opacity:0.8}
+}
+.hive-title{font-family:var(--font-head);font-size:13px;color:var(--glow);letter-spacing:3}
+.hive-sub{font-size:9px;color:var(--text-dim);letter-spacing:1}
+.title-ver{font-size:8px;color:var(--text-dim);font-family:var(--font-head)}
+.title-close{
+  -webkit-app-region:no-drag;
+  background:rgba(139,0,0,0.5);border:1px solid var(--glow-dim);
+  color:var(--glow);font-size:11px;width:18px;height:18px;
+  border-radius:50%;cursor:pointer;line-height:18px;text-align:center;
+  flex-shrink:0;transition:all 0.2s;
+}
+.title-close:hover{background:rgba(220,20,20,0.8);box-shadow:0 0 6px var(--glow)}
+
+/* Tab Bar */
+.tab-bar{display:flex}
+.tab{
+  flex:1;padding:8px 0;
+  background:transparent;border:none;
+  border-bottom:2px solid transparent;
+  color:var(--text-dim);font-family:var(--font-head);font-size:10px;letter-spacing:2;
+  cursor:pointer;transition:all 0.2s;
+  -webkit-app-region:no-drag;
+}
+.tab.active{
+  color:var(--glow);border-bottom-color:var(--glow);
+  box-shadow:0 0 12px rgba(139,0,0,0.4);
+}
+
+/* Content */
+.content{flex:1;overflow:hidden;position:relative}
+
+/* Scanlines */
+.scanlines{
+  position:absolute;inset:0;pointer-events:none;z-index:20;
+  background:repeating-linear-gradient(
+    0deg,transparent,transparent 2px,
+    rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 3px
+  );
+}
+
+/* Hex bg */
+.hex-bg{
+  position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0.07;
+}
+
+/* Widget container */
+.widget{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:14px;gap:8px;
+}
+
+/* Status Bar */
+.status-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:4px 0;border-top:1px solid var(--border);flex-shrink:0;
+}
+.status-left{font-size:8px;color:var(--text-dim);font-family:var(--font-head);letter-spacing:1}
+.status-right{display:flex;align-items:center;gap:4px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)}
+.status-text{font-size:8px;color:var(--green);font-family:var(--font-head)}
+
+/* Calendar Widget */
+.cal-header{display:flex;justify-content:space-between;align-items:flex-start}
+.cal-module{font-size:9px;color:var(--accent);font-family:var(--font-head);letter-spacing:2;opacity:0.8}
+.cal-subsystem{font-size:8px;color:var(--text-dim);letter-spacing:1}
+.cal-big-day{
+  border:1px solid var(--border);box-shadow:0 0 10px rgba(139,0,0,0.3);
+  padding:4px 10px;text-align:center;background:var(--panel);
+}
+.cal-big-num{font-size:31px;font-family:var(--font-head);color:var(--glow);line-height:1;font-weight:700}
+.cal-big-dow{font-size:9px;color:var(--text-dim)}
+
+.cal-month-row{display:flex;justify-content:space-between;align-items:center}
+.cal-month{font-size:15px;font-family:var(--font-head);color:var(--glow);letter-spacing:2}
+.cal-lunar{font-size:9px;color:var(--accent2);font-family:var(--font-mono)}
+
+.cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-week-day{text-align:center;font-size:8px;color:var(--text-dim);font-family:var(--font-head);letter-spacing:1;padding:2px 0;border-bottom:1px solid var(--border)}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;flex:1}
+.cal-cell{
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:2px;
+  font-size:11px;position:relative;
+  transition:all 0.15s;
+}
+.cal-cell:hover{background:rgba(255,34,34,0.05)}
+.cal-cell.today{
+  border-color:var(--glow);background:rgba(255,34,34,0.12);
+  box-shadow:0 0 8px rgba(255,34,34,0.4);
+  color:#fff;font-weight:700;
+}
+.cal-cell.weekend{color:var(--text-dim)}
+.cal-cell.today.weekend{color:#fff}
+.cal-cell .dot{
+  position:absolute;bottom:1px;width:4px;height:4px;
+  border-radius:50%;background:var(--glow);
+  box-shadow:0 0 4px var(--glow);
+}
+.cal-cell.today .dot{background:#fff}
+
+/* Price Widget */
+.price-header{display:flex;justify-content:space-between;align-items:flex-start}
+.price-module{font-size:9px;color:var(--accent);font-family:var(--font-head);letter-spacing:2;opacity:0.8}
+.price-subsystem{font-size:8px;color:var(--text-dim);letter-spacing:1}
+.price-badge{
+  border:1px solid var(--border);box-shadow:0 0 6px rgba(0,255,204,0.15);
+  padding:3px 8px;background:var(--panel);
+}
+.price-badge-label{font-size:8px;color:var(--accent2)}
+.price-badge-status{font-size:8px;color:var(--green)}
+.price-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green);display:inline-block;margin-right:3px}
+
+.price-tabs{display:flex;gap:4px}
+.price-tab{
+  flex:1;padding:5px 0;font-size:9px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--text-dim);font-family:var(--font-head);letter-spacing:1;
+  cursor:pointer;transition:all 0.2s;
+  -webkit-app-region:no-drag;
+}
+.price-tab.active{
+  border-color:var(--glow);background:rgba(255,34,34,0.1);
+  color:var(--glow);box-shadow:0 0 8px rgba(139,0,0,0.3);
+}
+
+.product-list{display:flex;flex-direction:column;gap:6px;flex:1;overflow-y:auto;padding-right:2px}
+.product-card{
+  padding:8px;border:1px solid var(--border);
+  background:rgba(10,15,20,0.8);border-radius:2px;
+  cursor:pointer;transition:all 0.15s;
+  -webkit-app-region:no-drag;
+}
+.product-card:hover{border-color:var(--glow-dim);background:rgba(20,5,5,0.6)}
+.product-card.selected{border-color:var(--glow);background:rgba(255,34,34,0.08);box-shadow:0 0 10px rgba(255,34,34,0.3)}
+.product-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.product-info{flex:1;min-width:0}
+.product-brand{font-size:9px;color:var(--glow);font-family:var(--font-head)}
+.product-name{font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.product-note{font-size:8px;color:var(--text-dim)}
+.product-right{text-align:right;flex-shrink:0}
+.product-price{font-size:14px;font-family:var(--font-head);color:var(--text)}
+.product-change{font-size:9px}
+.product-change.up{color:var(--warn)}
+.product-change.down{color:var(--green)}
+.mini-chart{margin-top:5px;display:flex;align-items:flex-end;gap:1px;height:28px}
+.chart-bar{flex:1;background:rgba(255,34,34,0.3);border-radius:1px 1px 0 0;transition:height 0.3s;min-width:4px}
+.chart-bar.up{background:rgba(255,102,0,0.4)}
+.chart-bar.down{background:rgba(0,204,102,0.4)}
+
+/* Bottom Bar */
+.bottom-bar{
+  display:flex;justify-content:center;align-items:center;gap:16px;
+  padding:4px 12px;
+  border-top:1px solid var(--border);background:#060606;flex-shrink:0;
+}
+.bottom-text{font-size:8px;color:var(--text-dim);font-family:var(--font-head);letter-spacing:1}
+.bottom-status{display:flex;align-items:center;gap:3px}
+.bottom-dot{width:5px;height:5px;border-radius:50%;background:var(--accent2);box-shadow:0 0 4px var(--accent2)}
+.bottom-status-text{font-size:8px;color:var(--accent2);font-family:var(--font-head)}
+
+/* Corner decorations */
+.corner-tl,.corner-br{
+  position:absolute;width:12px;height:12px;pointer-events:none;z-index:5;
+}
+.corner-tl{top:4px;left:4px;border-top:1px solid var(--glow-dim);border-left:1px solid var(--glow-dim)}
+.corner-br{bottom:4px;right:4px;border-bottom:1px solid var(--glow-dim);border-right:1px solid var(--glow-dim)}
+
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Title Bar -->
+  <div class="title-bar">
+    <div class="left">
+      <div class="led"></div>
+      <div>
+        <div class="hive-title">HIVE-7</div>
+        <div class="hive-sub">RED QUEEN AI // DESKTOP WIDGET</div>
+      </div>
+    </div>
+    <div class="title-ver">v3.0 // CLASSIFIED</div>
+    <button class="title-close" onclick="window.close()">×</button>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar" style="display:none">
+    <button class="tab active" data-tab="calendar" onclick="switchTab('calendar')">▸ CALENDAR</button>
+    <button class="tab" data-tab="price" onclick="switchTab('price')">▸ PRICE MONITOR</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="scanlines"></div>
+
+    <!-- Hex BG SVG -->
+    <svg class="hex-bg" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="hexPat" x="0" y="0" width="52" height="60" patternUnits="userSpaceOnUse">
+          <polygon points="26,1 50,15 50,45 26,59 2,45 2,15" fill="none" stroke="#ff2222" stroke-width="0.7"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#hexPat)"/>
+    </svg>
+
+    <!-- Corner decorations -->
+    <div class="corner-tl"></div>
+    <div class="corner-br"></div>
+
+    <!-- Calendar Widget -->
+    <div id="widget-calendar" class="widget">
+      <div class="cal-header">
+        <div>
+          <div class="cal-module">▸ CALENDAR MODULE</div>
+          <div class="cal-subsystem">HIVE-7 // SUBSYSTEM B</div>
+        </div>
+        <div class="cal-big-day">
+          <div class="cal-big-num" id="cal-day-num">--</div>
+          <div class="cal-big-dow" id="cal-day-dow">---</div>
+        </div>
+      </div>
+
+      <div class="cal-month-row">
+        <div class="cal-month" id="cal-month-str">----- ----</div>
+        <div class="cal-lunar" id="cal-lunar">--</div>
+      </div>
+
+      <div class="cal-week" id="cal-week-header"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+
+      <div class="status-bar">
+        <div class="status-left">HIVE SYSTEM v3.0</div>
+        <div class="status-right">
+          <div class="dot"></div>
+          <div class="status-text">ONLINE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Price Widget -->
+    <div id="widget-price" class="widget hide">
+      <div class="price-header">
+        <div>
+          <div class="price-module">▸ PRICE MONITOR</div>
+          <div class="price-subsystem">HIVE-7 // SUBSYSTEM C</div>
+        </div>
+        <div class="price-badge">
+          <div class="price-badge-label">JD TRACKER</div>
+          <div class="price-badge-status"><span class="price-badge-dot"></span>LIVE</div>
+        </div>
+      </div>
+
+      <div class="price-tabs">
+        <button class="price-tab active" onclick="setPriceCategory('gpu')">GPU</button>
+        <button class="price-tab" onclick="setPriceCategory('ram')">RAM</button>
+      </div>
+
+      <div class="product-list" id="product-list"></div>
+
+      <div class="status-bar">
+        <div class="status-left">UPDATE: 2026-03-18 09:00</div>
+        <div class="status-right">
+          <div class="dot"></div>
+          <div class="status-text">ONLINE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-text">UMBRELL CORP // AI DIVISION</div>
+    <div class="bottom-status">
+      <div class="bottom-dot"></div>
+      <div class="bottom-status-text">SYSTEM NOMINAL</div>
+    </div>
+    <div class="bottom-text">2026.03.19</div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const PRODUCTS = {
+  gpu: [
+    {brand:"万丽",name:"RTX5090D V2 OC 24GB 星际白",note:"当前最低价",last_price:18499,history:[18999,18888,18750,18599,18500,18499]},
+    {brand:"影驰",name:"RTX5090D v2 星曜 LUNA OC",note:"JD自营",last_price:18904,history:[19200,19100,19050,18980,18920,18904]},
+    {brand:"耕升",name:"RTX5090D v2 炫光 OC 24G",note:"JD自营",last_price:19401,history:[19800,19600,19500,19450,19420,19401]},
+    {brand:"技嘉",name:"RTX5090D 超级雕V2 24G",note:"超级雕白色",last_price:23107,history:[23500,23300,23200,23180,23150,23107]},
+    {brand:"七彩虹",name:"RTX5090D 32G 火神",note:"32GB显存",last_price:22685,history:[22900,22800,22750,22700,22700,22685]},
+    {brand:"微星",name:"MSI RTX5090D V2 VENTUS 3X OC",note:"万图师",last_price:16416,history:[16999,16800,16600,16500,16450,16416]},
+  ],
+  ram: [
+    {brand:"宏碁",name:"DDR5 6400 32GB (2x16G) HT200冰刀",note:"JD自营特价",last_price:849,history:[999,959,920,880,860,849]},
+    {brand:"威刚",name:"XPG DDR5 6000 32GB (2x16G) 龙耀D500G",note:"C26低时序",last_price:1099,history:[1150,1130,1110,1100,1099,1099]},
+    {brand:"雷克沙",name:"DDR5 6000 32GB RGB 战神之翼",note:"90天低价",last_price:999,history:[1099,1050,1020,1000,999,999]},
+    {brand:"芝奇",name:"DDR5 6000 32GB 焰刃RGB C36",note:"JD自营",last_price:1399,history:[1450,1430,1410,1400,1399,1399]},
+    {brand:"金百达",name:"DDR5 7200 32GB A-die 星刃RGB",note:"海力士A-die",last_price:3899,history:[4100,4050,4000,3950,3900,3899]},
+    {brand:"十铨",name:"DDR5 6000 32GB C30 特挑海力士",note:"Expert系列",last_price:3299,history:[3450,3400,3350,3320,3300,3299]},
+  ]
+};
+
+// ===== LUNAR =====
+const LUNAR_MONTHS=['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+const LUNAR_DAYS=['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+  '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+  '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+const LUNAR_INFO=[0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+  0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+  0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970];
+const YEAR_DAYS=y=>348+(LUNAR_INFO[y-1900]&0x8000?1:0)+((LUNAR_INFO[y-1900]&0x08000)?1:0)+((LUNAR_INFO[y-1900]>>12)&0x01);
+
+function getLunar(date){
+  const base=new Date(1900,0,31);
+  const offset=Math.floor((date.getTime()-base.getTime())/86400000);
+  let acc=0;
+  for(let y=1900;y<2100&&offset>acc;y++)acc+=YEAR_DAYS(y);
+  const lyear=(offset-acc<=0)?1900:1900+Math.floor((offset)/366);
+  const lo=offset-(acc-YEAR_DAYS(lyear||1900));
+  const dayIdx=Math.abs(lo)%30;
+  const monthIdx=Math.floor(Math.abs(lo)/30)%12;
+  return `${LUNAR_MONTHS[monthIdx%12]}月${LUNAR_DAYS[dayIdx%30]}`;
+}
+
+// ===== CALENDAR =====
+const DAYS=['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const DOWS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+function getCalendarCells(y,m){
+  const first=(new Date(y,m,1).getDay()+6)%7;
+  const count=new Date(y,m+1,0).getDate();
+  const cells=Array(first).fill(null);
+  for(let i=1;i<=count;i++)cells.push(i);
+  while(cells.length%7!==0)cells.push(null);
+  return cells;
+}
+
+function renderCalendar(){
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth(),today=now.getDate();
+  const cells=getCalendarCells(y,m);
+
+  document.getElementById('cal-day-num').textContent=today;
+  document.getElementById('cal-day-dow').textContent=DOWS[now.getDay()];
+  document.getElementById('cal-month-str').textContent=`${MONTHS[m]} ${y}`;
+  document.getElementById('cal-lunar').textContent=`↳ ${getLunar(now)}`;
+
+  const wh=document.getElementById('cal-week-header');
+  wh.innerHTML=DAYS.map(d=>`<div class="cal-week-day">${d}</div>`).join('');
+
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML=cells.map((d,i)=>{
+    const isToday=d===today;
+    const isEnd=i%7===5||i%7===6;
+    const cls=['cal-cell',isToday?'today':'',isEnd?'weekend':''].join(' ').trim();
+    return `<div class="${cls}">${d||''}${isToday?'<span class="dot"></span>':''}</div>`;
+  }).join('');
+}
+
+// ===== PRICE =====
+let priceCategory='gpu';
+let selectedProduct=0;
+
+function setPriceCategory(cat){
+  priceCategory=cat;
+  document.querySelectorAll('.price-tab').forEach(t=>{
+    t.classList.toggle('active',t.textContent.trim().toLowerCase()===cat);
+  });
+  renderProducts();
+}
+
+function renderProducts(){
+  const list=document.getElementById('product-list');
+  const prods=PRODUCTS[priceCategory];
+
+  list.innerHTML=prods.map((p,i)=>{
+    const first=p.history[0],last=p.history[p.history.length-1];
+    const change=last-first;
+    const up=change>=0;
+    const min=Math.min(...p.history),max=Math.max(...p.history);
+    const range=max-min||1;
+    const bars=p.history.map((pr,idx)=>{
+      const h=((pr-min)/range*24+4);
+      const cls=idx===p.history.length-1?(up?'up':'down'):(up?'up':'down');
+      return `<div class="chart-bar ${cls}" style="height:${h}px"></div>`;
+    }).join('');
+
+    return `<div class="product-card ${i===selectedProduct?'selected':''}" onclick="selectProduct(${i})">
+      <div class="product-top">
+        <div class="product-info">
+          <div class="product-brand">${p.brand}</div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-note">${p.note}</div>
+        </div>
+        <div class="product-right">
+          <div class="product-price">¥${last.toLocaleString()}</div>
+          <div class="product-change ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(change).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="mini-chart">${bars}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectProduct(i){
+  selectedProduct=i;
+  document.querySelectorAll('.product-card').forEach((c,idx)=>{
+    c.classList.toggle('selected',idx===i);
+  });
+}
+
+// ===== TAB SWITCH =====
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.tab===tab);
+  });
+  document.getElementById('widget-calendar').classList.toggle('hide',tab!=='calendar');
+  document.getElementById('widget-price').classList.toggle('hide',tab!=='price');
+}
+
+// ===== INIT =====
+renderCalendar();
+renderProducts();
+</script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>HIVE-7 // Price Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050a0f;--panel:#0a0f14;--border:#1a0505;
+  --glow:#ff2222;--glow-dim:#8b0000;
+  --accent:#ff2222;--accent2:#00ffcc;
+  --text:#e0e0e0;--text-dim:#555;
+  --warn:#ff6600;--green:#00cc66;
+  --font-head:'Orbitron','Courier New',monospace;
+  --font-mono:'Share Tech Mono','Courier New',monospace;
+}
+html,body{width:100%;height:100vh;overflow:hidden;background:var(--bg);font-family:var(--font-mono);color:var(--text);user-select:none}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--glow-dim)}
+
+#app{display:flex;flex-direction:column;height:100vh}
+
+.title-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 12px;
+  background:#080808;
+  border-bottom:1px solid var(--border);
+  box-shadow:0 1px 16px rgba(139,0,0,0.25);
+  flex-shrink:0;-webkit-app-region:drag;
+}
+.title-bar .left{display:flex;align-items:center;gap:10px}
+.led{width:8px;height:8px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 6px var(--glow)}50%{box-shadow:0 0 14px var(--glow)}}
+.hive-title{font-family:var(--font-head);font-size:12px;color:var(--glow);letter-spacing:3}
+.hive-sub{font-size:8px;color:var(--text-dim);letter-spacing:1}
+.title-ver{font-size:7px;color:var(--text-dim);font-family:var(--font-head)}
+.title-close{-webkit-app-region:no-drag;background:rgba(139,0,0,0.5);border:1px solid var(--glow-dim);color:var(--glow);font-size:10px;width:18px;height:18px;border-radius:50%;cursor:pointer;line-height:18px;text-align:center;flex-shrink:0;transition:all 0.2s}
+.title-close:hover{background:rgba(220,20,20,0.8);box-shadow:0 0 6px var(--glow)}
+
+.content{flex:1;overflow:hidden;position:relative;padding:12px;display:flex;flex-direction:column;gap:8px}
+.scanlines{position:absolute;inset:0;pointer-events:none;z-index:20;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 3px)}
+.hex-bg{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0.07}
+.corner-tl,.corner-br{position:absolute;width:12px;height:12px;pointer-events:none;z-index:5}
+.corner-tl{top:4px;left:4px;border-top:1px solid var(--glow-dim);border-left:1px solid var(--glow-dim)}
+.corner-br{bottom:4px;right:4px;border-bottom:1px solid var(--glow-dim);border-right:1px solid var(--glow-dim)}
+
+.price-header{display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0}
+.price-module{font-size:8px;color:var(--accent);font-family:var(--font-head);letter-spacing:2;opacity:0.8}
+.price-subsystem{font-size:7px;color:var(--text-dim);letter-spacing:1}
+.price-badge{border:1px solid var(--border);box-shadow:0 0 6px rgba(0,255,204,0.15);padding:4px 10px;background:var(--panel)}
+.price-badge-label{font-size:8px;color:var(--accent2)}
+.price-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;margin-right:4px;animation:pulse 2s ease-in-out infinite}
+.price-badge-status{font-size:7px;color:var(--green)}
+
+.price-tabs{display:flex;gap:6px;flex-shrink:0}
+.price-tab{flex:1;padding:6px 0;font-size:9px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-family:var(--font-head);letter-spacing:1;cursor:pointer;transition:all 0.2s;-webkit-app-region:no-drag}
+.price-tab.active{border-color:var(--glow);background:rgba(255,34,34,0.1);color:var(--glow);box-shadow:0 0 8px rgba(139,0,0,0.3)}
+
+.product-list{flex:1;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+.product-card{
+  padding:10px;border:1px solid var(--border);
+  background:rgba(10,15,20,0.9);border-radius:2px;
+  cursor:pointer;transition:all 0.15s;-webkit-app-region:no-drag;
+}
+.product-card:hover{border-color:var(--glow-dim);background:rgba(20,5,5,0.6)}
+.product-card.selected{border-color:var(--glow);background:rgba(255,34,34,0.08);box-shadow:0 0 12px rgba(255,34,34,0.3)}
+.product-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.product-info{flex:1;min-width:0}
+.product-brand{font-size:9px;color:var(--glow);font-family:var(--font-head)}
+.product-name{font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.product-note{font-size:8px;color:var(--text-dim)}
+.product-right{text-align:right;flex-shrink:0}
+.product-price{font-size:14px;font-family:var(--font-head);color:var(--text)}
+.product-change{font-size:9px}
+.product-change.up{color:var(--warn)}
+.product-change.down{color:var(--green)}
+.mini-chart{margin-top:6px;display:flex;align-items:flex-end;gap:2px;height:32px}
+.chart-bar{flex:1;background:rgba(255,34,34,0.3);border-radius:1px 1px 0 0;transition:height 0.4s;min-width:5px}
+.chart-bar.up{background:rgba(255,102,0,0.4)}
+.chart-bar.down{background:rgba(0,204,102,0.4)}
+
+.status-bar{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-top:1px solid var(--border);flex-shrink:0}
+.status-left{font-size:7px;color:var(--text-dim);font-family:var(--font-head)}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 4px var(--green)}
+.status-right{display:flex;align-items:center;gap:4px}
+.status-text{font-size:7px;color:var(--green);font-family:var(--font-head)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="title-bar">
+    <div class="left">
+      <div class="led"></div>
+      <div>
+        <div class="hive-title">HIVE-7</div>
+        <div class="hive-sub">PRICE MONITOR // JD TRACKER</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="title-ver">UPDATE: 2026-03-18 09:00</div>
+      <button class="title-close" onclick="window.close()">×</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="scanlines"></div>
+    <svg class="hex-bg" xmlns="http://www.w3.org/2000/svg">
+      <defs><pattern id="hp" x="0" y="0" width="52" height="60" patternUnits="userSpaceOnUse">
+        <polygon points="26,1 50,15 50,45 26,59 2,45 2,15" fill="none" stroke="#ff2222" stroke-width="0.7"/>
+      </pattern></defs>
+      <rect width="100%" height="100%" fill="url(#hp)"/>
+    </svg>
+    <div class="corner-tl"></div>
+    <div class="corner-br"></div>
+
+    <div class="price-header">
+      <div>
+        <div class="price-module">▸ PRICE MONITOR</div>
+        <div class="price-subsystem">HIVE-7 // SUBSYSTEM C</div>
+      </div>
+      <div class="price-badge">
+        <div class="price-badge-label">JD TRACKER</div>
+        <div class="price-badge-status"><span class="price-badge-dot"></span>LIVE</div>
+      </div>
+    </div>
+
+    <div class="price-tabs">
+      <button class="price-tab active" onclick="setCat('gpu')">▸ GPU</button>
+      <button class="price-tab" onclick="setCat('ram')">▸ RAM</button>
+    </div>
+
+    <div class="product-list" id="list"></div>
+
+    <div class="status-bar">
+      <div class="status-left">JD PRICE HISTORY // HIVE-7</div>
+      <div class="status-right">
+        <div class="dot"></div>
+        <div class="status-text">ONLINE</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  gpu:[
+    {brand:"万丽",name:"RTX5090D V2 OC 24GB 星际白",note:"当前最低价",last:18499,his:[18999,18888,18750,18599,18500,18499]},
+    {brand:"影驰",name:"RTX5090D v2 星曜 LUNA OC",note:"JD自营",last:18904,his:[19200,19100,19050,18980,18920,18904]},
+    {brand:"耕升",name:"RTX5090D v2 炫光 OC 24G",note:"JD自营",last:19401,his:[19800,19600,19500,19450,19420,19401]},
+    {brand:"技嘉",name:"RTX5090D 超级雕V2 24G",note:"超级雕白色",last:23107,his:[23500,23300,23200,23180,23150,23107]},
+    {brand:"七彩虹",name:"RTX5090D 32G 火神",note:"32GB显存",last:22685,his:[22900,22800,22750,22700,22700,22685]},
+    {brand:"微星",name:"MSI RTX5090D V2 VENTUS 3X",note:"万图师",last:16416,his:[16999,16800,16600,16500,16450,16416]},
+  ],
+  ram:[
+    {brand:"宏碁",name:"DDR5 6400 32GB HT200冰刀",note:"JD自营特价",last:849,his:[999,959,920,880,860,849]},
+    {brand:"威刚",name:"XPG DDR5 6000 32GB 龙耀D500G",note:"C26低时序",last:1099,his:[1150,1130,1110,1100,1099,1099]},
+    {brand:"雷克沙",name:"DDR5 6000 32GB RGB 战神之翼",note:"90天低价",last:999,his:[1099,1050,1020,1000,999,999]},
+    {brand:"芝奇",name:"DDR5 6000 32GB 焰刃RGB C36",note:"JD自营",last:1399,his:[1450,1430,1410,1400,1399,1399]},
+    {brand:"金百达",name:"DDR5 7200 32GB A-die 星刃RGB",note:"海力士A-die",last:3899,his:[4100,4050,4000,3950,3900,3899]},
+    {brand:"十铨",name:"DDR5 6000 32GB C30 特挑海力士",note:"Expert系列",last:3299,his:[3450,3400,3350,3320,3300,3299]},
+  ]
+};
+
+let cat = 'gpu';
+let sel = 0;
+
+function setCat(c) {
+  cat = c; sel = 0;
+  document.querySelectorAll('.price-tab').forEach((t,i) => {
+    t.classList.toggle('active', i === (c==='gpu'?0:1));
+  });
+  render();
+}
+
+function render() {
+  const prods = DATA[cat];
+  document.getElementById('list').innerHTML = prods.map((p, i) => {
+    const chg = p.his[p.his.length-1] - p.his[0];
+    const up = chg >= 0;
+    const mn = Math.min(...p.his), mx = Math.max(...p.his);
+    const rng = mx - mn || 1;
+    const bars = p.his.map((v, idx) => {
+      const h = (v - mn) / rng * 28 + 4;
+      const cls = idx === p.his.length-1 ? (up ? 'up' : 'down') : (up ? 'up' : 'down');
+      return `<div class="chart-bar ${cls}" style="height:${h}px"></div>`;
+    }).join('');
+    return `<div class="product-card ${i===sel?'selected':''}" onclick="sel=${i};render()">
+      <div class="product-top">
+        <div class="product-info">
+          <div class="product-brand">${p.brand}</div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-note">${p.note}</div>
+        </div>
+        <div class="product-right">
+          <div class="product-price">¥${p.last.toLocaleString()}</div>
+          <div class="product-change ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(chg).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="mini-chart">${bars}</div>
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+</body>
+</html>
