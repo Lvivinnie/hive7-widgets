@@ -114,33 +114,31 @@ if __name__ == '__main__':
     sh = ctypes.windll.user32.GetSystemMetrics(1)
     BASE_URL = f'http://127.0.0.1:{PORT}'
 
-    gap = 8
-    # Three windows: Calendar | Price | System Monitor
-    cal_w, cal_h = 360, 580
+    gap = 10
+    # Layout: System Monitor (top-left of right cluster) | Calendar (top-right of right cluster) | Price (bottom-right)
+    cal_w, cal_h = 360, 540
+    mon_w, mon_h = 400, 540
     pri_w, pri_h = 360, 580
-    mon_w, mon_h = 400, 580
-    total_w = cal_w + gap + pri_w + gap + mon_w
-    start_x = sw - total_w - 20
 
     win1 = webview.create_window(
         'HIVE-7 // Calendar',
         f'{BASE_URL}/redqueen_widget.html',
         width=cal_w, height=cal_h,
-        x=start_x, y=40,
+        x=sw - cal_w - 20, y=40,
         resizable=True, frameless=True,
     )
     win2 = webview.create_window(
-        'HIVE-7 // Price Monitor',
-        f'{BASE_URL}/redqueen_price.html',
-        width=pri_w, height=pri_h,
-        x=start_x + cal_w + gap, y=40,
-        resizable=True, frameless=True,
-    )
-    win3 = webview.create_window(
         'HIVE-7 // System Monitor',
         f'{BASE_URL}/redqueen_sysmon.html',
         width=mon_w, height=mon_h,
-        x=start_x + cal_w + gap + pri_w + gap, y=40,
+        x=sw - cal_w - gap - mon_w - 20, y=40,
+        resizable=True, frameless=True,
+    )
+    win3 = webview.create_window(
+        'HIVE-7 // Price Monitor',
+        f'{BASE_URL}/redqueen_price.html',
+        width=pri_w, height=pri_h,
+        x=sw - pri_w - 20, y=sh - pri_h - 40,
         resizable=True, frameless=True,
     )
 
